@@ -1,9 +1,9 @@
 const API_URL = "https://jsonplaceholder.typicode.com/posts";
 
 const loadBtn = document.querySelector("#load-btn");
+const submitBtn = document.querySelector("#submit-btn");
 const statusEl = document.querySelector("#status");
 const notesList = document.querySelector("#notes-list");
-const submitBtn = document.querySelector("#submit-btn");
 const noteForm = document.querySelector("#note-form");
 const titleInput = document.querySelector("#title-input");
 const bodyInput = document.querySelector("#body-input");
@@ -58,7 +58,15 @@ function renderNotes() {
 
         contentDiv.appendChild(titleH3);
         contentDiv.appendChild(bodyP);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => deleteNote(note.id, li));
+
         li.appendChild(contentDiv);
+        li.appendChild(deleteBtn);
 
         notesList.appendChild(li);
     });
@@ -81,8 +89,6 @@ async function loadNotes() {
         loadBtn.disabled = false;
     }
 }
-
-loadBtn.addEventListener("click", loadNotes);
 
 // 2. POST: Create note
 async function createNote(event) {
@@ -120,7 +126,13 @@ async function createNote(event) {
             body: JSON.stringify(newNotePayload)
         });
 
-        // Prepend created note to local array for UI feedback
+        /*
+           Note on JSONPlaceholder:
+           JSONPlaceholder simulates server creation by returning an object with a new ID (e.g., 101),
+           but it does not actually persist the record in its server-side database.
+           Approach: We capture the returned object and prepend it to our client-side `notes` array
+           so the user immediately sees feedback in the UI.
+        */
         notes.unshift(createdNote);
         renderNotes();
         setStatus(`Note created (status 201, id ${createdNote.id}).`, "success");
@@ -134,4 +146,25 @@ async function createNote(event) {
     }
 }
 
+// 3. DELETE: Remove note
+async function deleteNote(id, listItemElement) {
+    const deleteBtn = listItemElement.querySelector(".delete-btn");
+    deleteBtn.disabled = true;
+    setStatus("Deleting note...", "loading");
+
+    try {
+        await request(`${API_URL}/${id}`, {
+            method: "DELETE"
+        });
+
+        notes = notes.filter(note => note.id !== id);
+        renderNotes();
+        setStatus(`Note successfully deleted (status 200/204, id ${id}).`, "success");
+    } catch (error) {
+        setStatus(`Failed to delete note: ${error.message}`, "error");
+        deleteBtn.disabled = false;
+    }
+}
+
+loadBtn.addEventListener("click", loadNotes);
 noteForm.addEventListener("submit", createNote);
